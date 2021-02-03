@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,6 +20,7 @@ public class PortalPage {
 
 	private String name;
 	private String[] portletIds;
+	private String layoutTemplateId = "2_columns_i";
 
 	public PortalPage(String name, String portletId) {
 		this.name = name;
@@ -29,6 +30,16 @@ public class PortalPage {
 	public PortalPage(String name, String[] portletNames) {
 		this.name = name;
 		this.portletIds = portletNames;
+	}
+
+	public PortalPage(String name, String portletId, String layoutTemplateId) {
+		this.name = name;
+		this.portletIds = new String[] { portletId };
+		this.layoutTemplateId = layoutTemplateId;
+	}
+
+	public String getLayoutTemplateId() {
+		return layoutTemplateId;
 	}
 
 	public String getName() {

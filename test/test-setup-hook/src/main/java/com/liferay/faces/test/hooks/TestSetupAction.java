@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,14 +19,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import javax.portlet.PortletPreferences;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.liferay.portal.NoSuchGroupException;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.events.ActionException;
-import com.liferay.portal.kernel.events.SimpleAction;
-import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.portlet.PortletBag;
+import com.liferay.portal.kernel.portlet.PortletBagPool;
 import com.liferay.portal.kernel.xml.Attribute;
 import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.DocumentException;
@@ -37,52 +39,23 @@ import com.liferay.portal.model.Group;
 import com.liferay.portal.model.Layout;
 import com.liferay.portal.model.LayoutConstants;
 import com.liferay.portal.model.LayoutTypePortlet;
+import com.liferay.portal.model.Portlet;
 import com.liferay.portal.model.User;
 import com.liferay.portal.service.CompanyLocalServiceUtil;
 import com.liferay.portal.service.GroupLocalServiceUtil;
 import com.liferay.portal.service.LayoutLocalServiceUtil;
+import com.liferay.portal.service.PortletLocalServiceUtil;
 import com.liferay.portal.service.UserLocalServiceUtil;
+
+import com.liferay.portlet.PortletPreferencesFactoryUtil;
 
 
 /**
  * @author  Neil Griffin
  */
-public class TestSetupAction extends SimpleAction {
+public class TestSetupAction extends TestSetupCompatAction {
 
 	private static final Log logger = LogFactory.getLog(TestSetupAction.class);
-
-	private static final List<PortalPage> BRIDGE_DEMO_PAGES;
-	private static final List<PortalPage> PORTAL_DEMO_PAGES;
-
-	static {
-		BRIDGE_DEMO_PAGES = new ArrayList<PortalPage>();
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2", "1_WAR_jsf2portlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2-CDI", "1_WAR_jsf2cdiportlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2-JSP", "1_WAR_jsf2jspportlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2-PDF", "1_WAR_jsf2exportpdfportlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2-EVENTS",
-				new String[] {
-					"customers_WAR_jsf2ipceventscustomersportlet", "bookings_WAR_jsf2ipceventsbookingsportlet"
-				}));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("JSF2-PRP",
-				new String[] {
-					"customersPortlet_WAR_jsf2ipcpubrenderparamsportlet",
-					"bookingsPortlet_WAR_jsf2ipcpubrenderparamsportlet"
-				}));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("ICE3", "1_WAR_icefaces3portlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("ICE3-COMPAT", "1_WAR_icefaces3compatportlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("ICE3-CRUD", "1_WAR_icefaces3crudportlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("ICE3-IPC",
-				new String[] { "1_WAR_icefaces3ipcajaxpushportlet", "2_WAR_icefaces3ipcajaxpushportlet" }));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("PRIME3", "1_WAR_primefaces3portlet_INSTANCE_"));
-		BRIDGE_DEMO_PAGES.add(new PortalPage("RICH4", "1_WAR_richfaces4portlet_INSTANCE_"));
-	}
-
-	static {
-		PORTAL_DEMO_PAGES = new ArrayList<PortalPage>();
-		PORTAL_DEMO_PAGES.add(new PortalPage("ICE3-DIR", "1_WAR_icefaces3directoryportlet"));
-		PORTAL_DEMO_PAGES.add(new PortalPage("ICE3-DOC", "1_WAR_icefaces3documentsportlet"));
-	}
 
 	@Override
 	public void run(String[] companyIds) throws ActionException {
@@ -92,15 +65,198 @@ public class TestSetupAction extends SimpleAction {
 			for (String companyIdAsString : companyIds) {
 
 				long companyId = Long.parseLong(companyIdAsString);
+				setupPermissionChecker(companyId);
+
 				Company company = CompanyLocalServiceUtil.getCompanyById(companyId);
 				long userId = company.getDefaultUser().getUserId();
-				setupSites(companyId, userId);
 				setupUsers(companyId, userId);
+				setupSites(companyId, userId);
+				clearPermissionChecker();
 			}
 		}
 		catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}
+	}
+
+	protected void addAllUsersToSite(long companyId, long groupId) throws Exception {
+
+		List<User> users = UserLocalServiceUtil.getUsers(QueryUtil.ALL_POS, QueryUtil.ALL_POS);
+		ArrayList<Long> userIdList = new ArrayList<Long>();
+
+		for (User user : users) {
+
+			if (!user.isDefaultUser()) {
+				userIdList.add(user.getUserId());
+			}
+		}
+
+		long[] userIds = new long[userIdList.size()];
+
+		for (int i = 0; i < userIds.length; i++) {
+			userIds[i] = userIdList.get(i);
+		}
+
+		UserLocalServiceUtil.addGroupUsers(groupId, userIds);
+	}
+
+	protected void setupBridgeDemosSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "Bridge Demos");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.BRIDGE_DEMO_PAGES) {
+			setupPrivatePage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupBridgeIssuesSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "Bridge Issues");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.BRIDGE_ISSUE_PAGES) {
+			setupPublicPage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupLSVIssuesSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "LSV Issues");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.LSV_ISSUE_PAGES) {
+			setupPublicPage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupBridgeTCKSite(long companyId, long userId) throws Exception, DocumentException {
+		Group site = getSiteForSetup(companyId, userId, "Bridge TCK");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		URL configFileURL = getClass().getClassLoader().getResource("pluto-portal-driver-config.xml");
+		Document document = SAXReaderUtil.read(configFileURL);
+		Element rootElement = document.getRootElement();
+		Element renderConfigElement = rootElement.element("render-config");
+		Iterator<Element> pageElementIterator = renderConfigElement.elementIterator("page");
+
+		while (pageElementIterator.hasNext()) {
+			Element pageElement = pageElementIterator.next();
+			Attribute nameAttribute = pageElement.attribute("name");
+			String pageName = nameAttribute.getValue();
+			Element portletElement = pageElement.element("portlet");
+			nameAttribute = portletElement.attribute("name");
+
+			String portletName = nameAttribute.getValue();
+			String liferayPortletName = portletName.replaceAll("-", "");
+			String liferayPortletId = liferayPortletName + "_WAR_bridgetckmainportlet";
+			PortalPage portalPage = new PortalPage(pageName, liferayPortletId);
+			setupPrivatePage(companyId, userId, groupId, portalPage);
+		}
+
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Lifecycle Set", "chapter3TestslifecycleTestportlet_WAR_bridgetcklifecyclesetportlet"));
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Render Policy Always Delegate",
+				"chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy1portlet"));
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Render Policy Default",
+				"chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy2portlet"));
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Render Policy Never Delegate",
+				"chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy3portlet"));
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Render Response Wrapper",
+				"chapter6_2_1TestsusesConfiguredRenderResponseWrapperTestportlet_WAR_bridgetckresponsewrapperportlet"));
+		setupPrivatePage(companyId, userId, groupId,
+			new PortalPage("Resource Response Wrapper",
+				"chapter6_2_1TestsusesConfiguredResourceResponseWrapperTestportlet_WAR_bridgetckresponsewrapperportlet"));
+	}
+
+	protected void setupGuestSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "Guest");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.GUEST_PAGES) {
+			setupPublicPage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupPage(long companyId, long userId, long groupId, PortalPage portalPage, boolean privateLayout)
+		throws Exception {
+		String portalPageName = portalPage.getName();
+		String[] portletIds = portalPage.getPortletIds();
+		Layout portalPageLayout = getPortalPageLayout(userId, groupId, portalPageName, privateLayout);
+		LayoutTypePortlet layoutTypePortlet = (LayoutTypePortlet) portalPageLayout.getLayoutType();
+
+		layoutTypePortlet.setLayoutTemplateId(userId, portalPage.getLayoutTemplateId(), false);
+
+		int columnNumber = 1;
+
+		for (String portletId : portletIds) {
+
+			if (portletId.endsWith("_INSTANCE_")) {
+				portletId = portletId + "ABCD";
+			}
+
+			addPortlet(layoutTypePortlet, userId, columnNumber, portletId);
+
+			// Store the preferences for the portlet, if any
+			PortletPreferences portletPreferences = PortletPreferencesFactoryUtil.getLayoutPortletSetup(
+					portalPageLayout, portletId);
+			Portlet portlet = PortletLocalServiceUtil.getPortletById(companyId, portletId);
+			PortletBag portletBag = PortletBagPool.get(portlet.getRootPortletId());
+
+			if (portletBag != null) {
+				portletPreferences.store();
+			}
+
+			columnNumber++;
+		}
+
+		LayoutLocalServiceUtil.updateLayout(portalPageLayout);
+
+		logger.info("Setting up page name=[" + portalPageName + "]");
+	}
+
+	protected void setupPortalDemosSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "Portal Demos");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.PORTAL_DEMO_PAGES) {
+			setupPrivatePage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupPortalIssuesSite(long companyId, long userId) throws Exception {
+		Group site = getSiteForSetup(companyId, userId, "Portal Issues");
+		long groupId = site.getGroupId();
+		addAllUsersToSite(companyId, groupId);
+
+		for (PortalPage portalPage : TestPages.PORTAL_ISSUE_PAGES) {
+			setupPublicPage(companyId, userId, groupId, portalPage);
+		}
+	}
+
+	protected void setupPrivatePage(long companyId, long userId, long groupId, PortalPage portalPage) throws Exception {
+		setupPage(companyId, userId, groupId, portalPage, true);
+	}
+
+	protected void setupPublicPage(long companyId, long userId, long groupId, PortalPage portalPage) throws Exception {
+		setupPage(companyId, userId, groupId, portalPage, false);
+	}
+
+	protected void setupSites(long companyId, long userId) throws Exception, DocumentException {
+		setupBridgeDemosSite(companyId, userId);
+		setupBridgeIssuesSite(companyId, userId);
+		setupLSVIssuesSite(companyId, userId);
+		setupPortalDemosSite(companyId, userId);
+		setupPortalIssuesSite(companyId, userId);
+		setupBridgeTCKSite(companyId, userId);
+		setupGuestSite(companyId, userId);
 	}
 
 	protected void setupUsers(long companyId, long userId) throws Exception {
@@ -129,115 +285,10 @@ public class TestSetupAction extends SimpleAction {
 		ServiceUtil.addUser(userId, companyId, "George", "Wythe");
 	}
 
-	protected void addAllUsersToSite(long companyId, long groupId) throws Exception {
-
-		List<User> users = UserLocalServiceUtil.getUsers(QueryUtil.ALL_POS, QueryUtil.ALL_POS);
-		ArrayList<Long> userIdList = new ArrayList<Long>();
-
-		for (User user : users) {
-
-			if (!user.isDefaultUser()) {
-				userIdList.add(user.getUserId());
-			}
-		}
-
-		long[] userIds = new long[userIdList.size()];
-
-		for (int i = 0; i < userIds.length; i++) {
-			userIds[i] = userIdList.get(i);
-		}
-
-		UserLocalServiceUtil.addGroupUsers(groupId, userIds);
-	}
-
-	protected void setupBridgeDemosSite(long companyId, long userId) throws Exception {
-		Group site = getSite(companyId, userId, "Bridge Demos");
-		long groupId = site.getGroupId();
-		addAllUsersToSite(companyId, groupId);
-
-		for (PortalPage portalPage : BRIDGE_DEMO_PAGES) {
-			setupPage(userId, groupId, portalPage);
-		}
-	}
-
-	protected void setupBridgeTCKSite(long companyId, long userId) throws Exception, DocumentException {
-		Group site = getSite(companyId, userId, "Bridge TCK");
-		long groupId = site.getGroupId();
-		addAllUsersToSite(companyId, groupId);
-
-		URL configFileURL = getClass().getClassLoader().getResource("pluto-portal-driver-config.xml");
-		Document document = SAXReaderUtil.read(configFileURL);
-		Element rootElement = document.getRootElement();
-		Element renderConfigElement = rootElement.element("render-config");
-		Iterator<Element> pageElementIterator = renderConfigElement.elementIterator("page");
-
-		while (pageElementIterator.hasNext()) {
-			Element pageElement = pageElementIterator.next();
-			Attribute nameAttribute = pageElement.attribute("name");
-			String pageName = nameAttribute.getValue();
-			Element portletElement = pageElement.element("portlet");
-			nameAttribute = portletElement.attribute("name");
-
-			String portletName = nameAttribute.getValue();
-			String liferayPortletName = portletName.replaceAll(StringPool.DASH, StringPool.BLANK);
-			String liferayPortletId = liferayPortletName + "_WAR_bridgetckmainportlet";
-			PortalPage portalPage = new PortalPage(pageName, liferayPortletId);
-			setupPage(userId, groupId, portalPage);
-		}
-		
-		setupPage(userId, groupId, new PortalPage("Lifecycle Set", "chapter3TestslifecycleTestportlet_WAR_bridgetcklifecyclesetportlet"));
-		setupPage(userId, groupId, new PortalPage("Render Policy Always Delegate", "chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy1portlet"));
-		setupPage(userId, groupId, new PortalPage("Render Policy Default", "chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy2portlet"));
-		setupPage(userId, groupId, new PortalPage("Render Policy Never Delegate", "chapter3TestsrenderPolicyTestportlet_WAR_bridgetckrenderpolicy3portlet"));
-		setupPage(userId, groupId, new PortalPage("Render Response Wrapper", "chapter6_2_1TestsusesConfiguredRenderResponseWrapperTestportlet_WAR_bridgetckresponsewrapperportlet"));
-		setupPage(userId, groupId, new PortalPage("Resource Response Wrapper", "chapter6_2_1TestsusesConfiguredResourceResponseWrapperTestportlet_WAR_bridgetckresponsewrapperportlet"));
-	}
-
-	protected void setupPage(long userId, long groupId, PortalPage portalPage) throws Exception {
-		String portalPageName = portalPage.getName();
-		String[] portletIds = portalPage.getPortletIds();
-		Layout portalPageLayout = getPortalPageLayout(userId, groupId, portalPageName);
-		LayoutTypePortlet layoutTypePortlet = (LayoutTypePortlet) portalPageLayout.getLayoutType();
-
-		layoutTypePortlet.setLayoutTemplateId(userId, "2_columns_i", false);
-
-		int columnNumber = 1;
-
-		for (String portletId : portletIds) {
-
-			if (portletId.endsWith("_INSTANCE_")) {
-				portletId = portletId + "ABCD";
-			}
-
-			// NOTE: In Liferay 6.1.x the following call was to setPortletIds() but that method was removed in 6.2.x
-			layoutTypePortlet.addPortletId(userId, portletId, Integer.toString(columnNumber), 1);
-			columnNumber++;
-		}
-
-		LayoutLocalServiceUtil.updateLayout(portalPageLayout);
-
-		logger.info("Setup page: " + portalPageName);
-	}
-
-	protected void setupPortalDemosSite(long companyId, long userId) throws Exception {
-		Group site = getSite(companyId, userId, "Portal Demos");
-		long groupId = site.getGroupId();
-		addAllUsersToSite(companyId, groupId);
-
-		for (PortalPage portalPage : PORTAL_DEMO_PAGES) {
-			setupPage(userId, groupId, portalPage);
-		}
-	}
-
-	protected void setupSites(long companyId, long userId) throws Exception, DocumentException {
-		setupBridgeDemosSite(companyId, userId);
-		setupPortalDemosSite(companyId, userId);
-		setupBridgeTCKSite(companyId, userId);
-	}
-
-	protected Layout getPortalPageLayout(long userId, long groupId, String portalPageName) throws Exception {
+	protected Layout getPortalPageLayout(long userId, long groupId, String portalPageName, boolean privateLayout)
+		throws Exception {
 		Layout portalPageLayout = null;
-		boolean privateLayout = true;
+
 		List<Layout> layouts = LayoutLocalServiceUtil.getLayouts(groupId, privateLayout);
 
 		for (Layout layout : layouts) {
@@ -259,7 +310,7 @@ public class TestSetupAction extends SimpleAction {
 		return portalPageLayout;
 	}
 
-	protected Group getSite(long companyId, long userId, String name) throws Exception {
+	protected Group getSiteForSetup(long companyId, long userId, String name) throws Exception {
 
 		Group site = null;
 
@@ -269,6 +320,8 @@ public class TestSetupAction extends SimpleAction {
 		catch (NoSuchGroupException e) {
 			site = ServiceUtil.addActiveOpenGroup(userId, name);
 		}
+
+		logger.info("Setting up site name=[" + site.getName() + "] publicLayouts=[" + site.hasPublicLayouts() + "]");
 
 		return site;
 	}

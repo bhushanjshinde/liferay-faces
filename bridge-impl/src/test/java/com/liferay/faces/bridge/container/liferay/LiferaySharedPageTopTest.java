@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,9 +14,11 @@
 package com.liferay.faces.bridge.container.liferay;
 
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 import org.junit.Test;
 
+import com.liferay.faces.bridge.event.internal.liferay.LiferaySharedPageTop;
 import com.liferay.faces.util.logging.Logger;
 import com.liferay.faces.util.logging.LoggerFactory;
 
@@ -42,7 +44,7 @@ public class LiferaySharedPageTopTest {
 	private static final String RESOURCES_PORTLET1;
 	private static final String RESOURCES_PORTLET2;
 	private static final StringBundler RESOURCES_BOTH_PORTLETS;
-	private static final int TOTAL_THREADS = 10000;
+	private static final int TOTAL_THREADS = Runtime.getRuntime().availableProcessors() * 10;
 
 	static {
 		RESOURCES_BOTH_PORTLETS = new StringBundler();
@@ -112,9 +114,10 @@ public class LiferaySharedPageTopTest {
 	@Test
 	public void testMultiThreaded() {
 
-		long start = Calendar.getInstance().getTimeInMillis();
+		Calendar startCalendar = new GregorianCalendar();
+		long start = startCalendar.getTimeInMillis();
 
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < TOTAL_THREADS; i++) {
 
 			Thread testThread = new TestThread(this);
 			testThread.start();
@@ -142,7 +145,8 @@ public class LiferaySharedPageTopTest {
 		Assert.assertEquals(0, totalFailed.intValue());
 		Assert.assertEquals(TOTAL_THREADS, totalPassed.intValue());
 
-		long finish = Calendar.getInstance().getTimeInMillis();
+		Calendar finishCalendar = new GregorianCalendar();
+		long finish = finishCalendar.getTimeInMillis();
 		long duration = finish - start;
 
 		logger.info("Started {0} asynchronous threads, duration=[{1}ms] passed=[{2}] failed=[{3}]", TOTAL_THREADS,

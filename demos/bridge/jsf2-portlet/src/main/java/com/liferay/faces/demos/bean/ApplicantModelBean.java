@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,9 @@ package com.liferay.faces.demos.bean;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import javax.faces.bean.ManagedBean;
@@ -54,7 +56,9 @@ public class ApplicantModelBean implements Serializable {
 
 	public ApplicantModelBean() {
 		clearProperties();
-		this.dateOfBirth = new java.util.GregorianCalendar().getTime();
+
+		Calendar calendar = new GregorianCalendar();
+		this.dateOfBirth = calendar.getTime();
 	}
 
 	public void clearProperties() {

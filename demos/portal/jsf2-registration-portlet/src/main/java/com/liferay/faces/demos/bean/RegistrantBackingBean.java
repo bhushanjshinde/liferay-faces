@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,11 +21,11 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
 import javax.faces.event.ActionEvent;
 
-import com.liferay.faces.util.logging.Logger;
-import com.liferay.faces.util.logging.LoggerFactory;
 import com.liferay.faces.demos.model.Registrant;
 import com.liferay.faces.demos.service.RegistrantServiceUtil;
 import com.liferay.faces.portal.context.LiferayFacesContext;
+import com.liferay.faces.util.logging.Logger;
+import com.liferay.faces.util.logging.LoggerFactory;
 
 import com.liferay.portal.DuplicateUserEmailAddressException;
 import com.liferay.portal.DuplicateUserScreenNameException;
@@ -51,10 +51,7 @@ public class RegistrantBackingBean implements Serializable {
 	private static final long serialVersionUID = 2947548873495692163L;
 
 	// Logger
-	private static final transient Logger logger = LoggerFactory.getLogger(RegistrantBackingBean.class);
-
-	// Self-Injections
-	private LiferayFacesContext liferayFacesContext = LiferayFacesContext.getInstance();
+	private static final Logger logger = LoggerFactory.getLogger(RegistrantBackingBean.class);
 
 	// Injections
 	@ManagedProperty(value = "#{registrantModelBean}")
@@ -72,6 +69,7 @@ public class RegistrantBackingBean implements Serializable {
 				submittedRegistrant.getEmailAddress(), submittedRegistrant.getCaptchaText()
 			});
 
+		LiferayFacesContext liferayFacesContext = LiferayFacesContext.getInstance();
 		long creatorUserId = liferayFacesContext.getUser().getUserId();
 		long companyId = liferayFacesContext.getCompanyId();
 		Locale locale = liferayFacesContext.getLocale();

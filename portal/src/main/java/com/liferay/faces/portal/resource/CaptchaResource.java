@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -32,11 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
-import com.liferay.portal.kernel.captcha.Captcha;
 import com.liferay.portal.kernel.captcha.CaptchaUtil;
-import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
-import com.liferay.portal.kernel.util.PrefsPropsUtil;
-import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.util.PortalUtil;
 
 
@@ -65,8 +61,9 @@ public class CaptchaResource extends Resource {
 	@Override
 	public boolean userAgentNeedsUpdate(FacesContext context) {
 
-		// Since this is a list that can potentially change dynamically, always return true.
-		return false;
+		// Since the captcha image changes for every request, always return true so that the browser does not attempt
+		// to cache it.
+		return true;
 	}
 
 	@Override
@@ -82,15 +79,7 @@ public class CaptchaResource extends Resource {
 			HttpServletRequest httpServletRequest = PortalUtil.getHttpServletRequest(portletRequest);
 			HttpServletResponse httpServletResponse = PortalUtil.getHttpServletResponse(portletResponse);
 			CaptchaHttpServletResponse captchaHttpServletResponse = new CaptchaHttpServletResponse(httpServletResponse);
-			String captchaClassName = PrefsPropsUtil.getString(PropsKeys.CAPTCHA_ENGINE_IMPL);
-			ClassLoader portalClassLoader = PortalClassLoaderUtil.getClassLoader();
 
-			@SuppressWarnings("unchecked")
-			Class<Captcha> captchaClass = (Class<Captcha>) portalClassLoader.loadClass(captchaClassName);
-
-			CaptchaUtil captchaUtil = new CaptchaUtil();
-			Captcha captcha = captchaClass.newInstance();
-			captchaUtil.setCaptcha(captcha);
 			CaptchaUtil.serveImage(httpServletRequest, captchaHttpServletResponse);
 
 			String captchaText = (String) httpServletRequest.getSession().getAttribute(CAPTCHA_TEXT);

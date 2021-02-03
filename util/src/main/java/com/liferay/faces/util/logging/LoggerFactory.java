@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -12,6 +12,14 @@
  * details.
  */
 package com.liferay.faces.util.logging;
+
+import com.liferay.faces.util.logging.Logger;
+import com.liferay.faces.util.logging.internal.LoggerDefaultImpl;
+import com.liferay.faces.util.logging.internal.LoggerLog4JImpl;
+import com.liferay.faces.util.product.Product;
+import com.liferay.faces.util.product.ProductConstants;
+import com.liferay.faces.util.product.ProductMap;
+
 
 /**
  * In order to minimize dependencies, this class provides as a layer of abstraction over different logging mechanisms
@@ -32,10 +40,60 @@ public class LoggerFactory {
 		try {
 			Class.forName(CLASS_NAME_LOG4J_LOGGER);
 			LOG4J_AVAILABLE = true;
+
+			try {
+				new LoggerLog4JImpl(CLASS_NAME_LOG4J_LOGGER);
+			}
+			catch (NoClassDefFoundError e) {
+
+				String className = LoggerFactory.class.getName();
+				Product wildfly = ProductMap.getInstance().get(ProductConstants.WILDFLY);
+
+				if (wildfly.isDetected()) {
+					System.out.println(className + " (INFO): Detected JBoss Server " + wildfly.getVersion());
+					System.out.println(className + " (INFO): Add WEB-INF/log4j.jar to activate Log4J logging");
+				}
+				else {
+					System.err.println(className +
+						" (WARN): Possibly an incompatible version of log4j.jar in the classpath: " + e.getMessage());
+				}
+
+				LOG4J_AVAILABLE = false;
+			}
 		}
 		catch (Exception e) {
 			LOG4J_AVAILABLE = false;
 		}
+	}
+
+	/**
+	 * This method gets a logger from the underlying logging implementation. First it tries Log4J, then standard Java SE
+	 * logging mechanism. NOTE: In the future, support should be added for detection of Apache Commons-Logging and
+	 * SLF4J.
+	 *
+	 * @param   name  The name associated with the logger.
+	 *
+	 * @return  The logger associated with the specified name.
+	 */
+	public static final Logger getLogger(String name) {
+
+		Logger logger = null;
+
+		try {
+
+			if (LOG4J_AVAILABLE) {
+				logger = new LoggerLog4JImpl(name);
+			}
+		}
+		catch (NoClassDefFoundError e) {
+			// Ignore
+		}
+
+		if (logger == null) {
+			logger = new LoggerDefaultImpl(name);
+		}
+
+		return logger;
 	}
 
 	/**
@@ -48,27 +106,6 @@ public class LoggerFactory {
 	 * @return  The logger associated with the specified class.
 	 */
 	public static final Logger getLogger(Class<?> clazz) {
-
-		String className = clazz.getName();
-
-		Logger logger = null;
-
-		try {
-
-			if (LOG4J_AVAILABLE) {
-				logger = new LoggerLog4JImpl(className);
-			}
-		}
-		catch (NoClassDefFoundError e) {
-			System.err.println(
-				"com.liferay.faces.bridge.logging.LoggerFactory (WARN): Possibly an incompatible version of log4j.jar in the classpath: " +
-				e.getMessage());
-		}
-
-		if (logger == null) {
-			logger = new LoggerDefaultImpl(className);
-		}
-
-		return logger;
+		return getLogger(clazz.getName());
 	}
 }

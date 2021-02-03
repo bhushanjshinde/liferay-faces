@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -24,7 +24,7 @@ public class ShortHelper {
 
 	public static short toShort(String value, short defaultValue) {
 
-		short valueAsShort = 0;
+		short valueAsShort = defaultValue;
 
 		try {
 			valueAsShort = Short.parseShort(value);

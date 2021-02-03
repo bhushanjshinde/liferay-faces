@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.liferay.faces.util.config.ConfiguredServletMapping;
+import com.liferay.faces.util.config.ConfiguredSystemEventListener;
+
 
 /**
  * @author  Neil Griffin
@@ -31,7 +34,15 @@ public class BridgeConfigMockImpl implements BridgeConfig {
 		throw new UnsupportedOperationException();
 	}
 
-	public List<String> getConfiguredExtensions() {
+	public List<ConfiguredServletMapping> getConfiguredFacesServletMappings() {
+		throw new UnsupportedOperationException();
+	}
+
+	public List<String> getConfiguredSuffixes() {
+		throw new UnsupportedOperationException();
+	}
+
+	public List<ConfiguredSystemEventListener> getConfiguredSystemEventListeners() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -40,10 +51,6 @@ public class BridgeConfigMockImpl implements BridgeConfig {
 	}
 
 	public Set<String> getExcludedRequestAttributes() {
-		throw new UnsupportedOperationException();
-	}
-
-	public List<ServletMapping> getFacesServletMappings() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -56,11 +63,11 @@ public class BridgeConfigMockImpl implements BridgeConfig {
 	}
 
 	public String getViewIdRenderParameterName() {
-		throw new UnsupportedOperationException();
+		return "";
 	}
 
 	public String getViewIdResourceParameterName() {
-		throw new UnsupportedOperationException();
+		return "";
 	}
 
 	public String getWriteBehindRenderResponseWrapper() {

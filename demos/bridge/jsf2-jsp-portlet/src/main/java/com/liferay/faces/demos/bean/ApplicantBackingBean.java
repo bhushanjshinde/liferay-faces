@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,17 +19,17 @@ import java.util.List;
 
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
+import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.faces.event.ValueChangeEvent;
 
-import com.liferay.faces.bridge.component.HtmlInputFile;
-import com.liferay.faces.util.logging.Logger;
-import com.liferay.faces.util.logging.LoggerFactory;
+import com.liferay.faces.bridge.component.inputfile.InputFile;
 import com.liferay.faces.bridge.model.UploadedFile;
 import com.liferay.faces.demos.dto.City;
 import com.liferay.faces.demos.util.FacesMessageUtil;
+import com.liferay.faces.util.logging.Logger;
+import com.liferay.faces.util.logging.LoggerFactory;
 
 
 /**
@@ -38,36 +38,32 @@ import com.liferay.faces.demos.util.FacesMessageUtil;
  * @author  "Neil Griffin"
  */
 @ManagedBean(name = "applicantBackingBean")
-@ViewScoped
+@RequestScoped
 public class ApplicantBackingBean implements Serializable {
 
 	// serialVersionUID
 	private static final long serialVersionUID = 2947548873495692163L;
 
 	// Logger
-	private static final transient Logger logger = LoggerFactory.getLogger(ApplicantBackingBean.class);
+	private static final Logger logger = LoggerFactory.getLogger(ApplicantBackingBean.class);
 
 	// Injections
 	@ManagedProperty(value = "#{applicantModelBean}")
 	private transient ApplicantModelBean applicantModelBean;
+	@ManagedProperty(value = "#{applicantViewBean}")
+	private transient ApplicantViewBean applicantViewBean;
 	@ManagedProperty(value = "#{listModelBean}")
 	private transient ListModelBean listModelBean;
 
-	// JavaBeans Properties for UI
-	private boolean commentsRendered = false;
-	private boolean fileUploaderRendered = false;
-
-	private transient HtmlInputFile attachment1;
-	private transient HtmlInputFile attachment2;
-	private transient HtmlInputFile attachment3;
-
-	public void addAttachment(ActionEvent actionEvent) {
-		fileUploaderRendered = true;
-	}
+	// Private Data Members
+	private transient InputFile attachment1;
+	private transient InputFile attachment2;
+	private transient InputFile attachment3;
 
 	public void deleteUploadedFile(ActionEvent actionEvent) {
 
-		String fileId = (String) FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get("fileId");
+		String fileId = (String) FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get(
+				"fileId");
 
 		try {
 			List<UploadedFile> uploadedFiles = applicantModelBean.getUploadedFiles();
@@ -160,37 +156,30 @@ public class ApplicantBackingBean implements Serializable {
 		}
 	}
 
-	public void toggleComments(ActionEvent actionEvent) {
-		commentsRendered = !commentsRendered;
-	}
-
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings("unchecked")
 	public void uploadAttachments(ActionEvent actionEvent) {
 
 		List<UploadedFile> uploadedFiles = applicantModelBean.getUploadedFiles();
 
-		UploadedFile uploadedFile1 = attachment1.getUploadedFile();
+		List<UploadedFile> uploadedFiles1 = (List<UploadedFile>) attachment1.getValue();
 
-		if (uploadedFile1 != null) {
-			uploadedFiles.add(uploadedFile1);
-			logger.debug("uploadedFile1=[{0}]", uploadedFile1.getName());
+		if (uploadedFiles1 != null) {
+			uploadedFiles.addAll(uploadedFiles1);
 		}
 
-		UploadedFile uploadedFile2 = attachment2.getUploadedFile();
+		List<UploadedFile> uploadedFiles2 = (List<UploadedFile>) attachment2.getValue();
 
-		if (uploadedFile2 != null) {
-			uploadedFiles.add(uploadedFile2);
-			logger.debug("uploadedFile2=[{0}]", uploadedFile2.getName());
+		if (uploadedFiles2 != null) {
+			uploadedFiles.addAll(uploadedFiles2);
 		}
 
-		UploadedFile uploadedFile3 = attachment3.getUploadedFile();
+		List<UploadedFile> uploadedFiles3 = (List<UploadedFile>) attachment3.getValue();
 
-		if (uploadedFile3 != null) {
-			uploadedFiles.add(uploadedFile3);
-			logger.debug("uploadedFile3=[{0}]", uploadedFile3.getName());
+		if (uploadedFiles3 != null) {
+			uploadedFiles.addAll(uploadedFiles3);
 		}
 
-		fileUploaderRendered = false;
+		applicantViewBean.setFileUploaderRendered(false);
 	}
 
 	public void setApplicantModelBean(ApplicantModelBean applicantModelBean) {
@@ -199,40 +188,34 @@ public class ApplicantBackingBean implements Serializable {
 		this.applicantModelBean = applicantModelBean;
 	}
 
-	public HtmlInputFile getAttachment1() {
+	public void setApplicantViewBean(ApplicantViewBean applicantViewBean) {
+
+		// Injected via @ManagedProperty annotation
+		this.applicantViewBean = applicantViewBean;
+	}
+
+	public InputFile getAttachment1() {
 		return attachment1;
 	}
 
-	public void setAttachment1(HtmlInputFile attachment1) {
+	public void setAttachment1(InputFile attachment1) {
 		this.attachment1 = attachment1;
 	}
 
-	public HtmlInputFile getAttachment2() {
+	public InputFile getAttachment2() {
 		return attachment2;
 	}
 
-	public void setAttachment2(HtmlInputFile attachment2) {
+	public void setAttachment2(InputFile attachment2) {
 		this.attachment2 = attachment2;
 	}
 
-	public HtmlInputFile getAttachment3() {
+	public InputFile getAttachment3() {
 		return attachment3;
 	}
 
-	public void setAttachment3(HtmlInputFile attachment3) {
+	public void setAttachment3(InputFile attachment3) {
 		this.attachment3 = attachment3;
-	}
-
-	public void setCommentsRendered(boolean commentsRendered) {
-		this.commentsRendered = commentsRendered;
-	}
-
-	public boolean isCommentsRendered() {
-		return commentsRendered;
-	}
-
-	public boolean isFileUploaderRendered() {
-		return fileUploaderRendered;
 	}
 
 	public void setListModelBean(ListModelBean listModelBean) {

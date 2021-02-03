@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,6 +16,7 @@ package com.liferay.faces.util.xml;
 import java.net.URL;
 
 import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,9 +26,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.ext.LexicalHandler;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.liferay.faces.util.lang.StringPool;
 import com.liferay.faces.util.logging.Logger;
 import com.liferay.faces.util.logging.LoggerFactory;
+import com.liferay.faces.util.xml.internal.SAXParserImpl;
 
 
 /**
@@ -42,7 +43,7 @@ public class SAXParserTest {
 	public void testFaceletComposition() {
 
 		try {
-			SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+			SAXParserFactory saxParserFactory = ConcurrentSAXParserFactory.newInstance();
 
 			if (saxParserFactory != null) {
 				SAXParser saxParser = saxParserFactory.newSAXParser();
@@ -51,16 +52,17 @@ public class SAXParserTest {
 
 					if (saxParser instanceof SAXParserImpl) {
 
-						Assert.assertTrue(true);
-
 						URL url = getClass().getClassLoader().getResource("applicant.xhtml");
 						TestHandler testHandler = new TestHandler();
 						saxParser.parse(url.openStream(), testHandler);
 						Assert.assertEquals(1, testHandler.getTotalComments());
-						Assert.assertEquals(2, testHandler.getTotalCharacters());
-						Assert.assertEquals(86, testHandler.getTotalStartElements());
-						Assert.assertEquals(86, testHandler.getTotalEndElements());
-						Assert.assertEquals(139, testHandler.getTotalAttributes());
+						Assert.assertEquals(4, testHandler.getTotalPlainText());
+						Assert.assertEquals(91, testHandler.getTotalStartElements());
+						Assert.assertEquals(91, testHandler.getTotalEndElements());
+						Assert.assertEquals(144, testHandler.getTotalAttributes());
+						Assert.assertEquals(2, testHandler.getTotalInlineScripts());
+						Assert.assertEquals(1, testHandler.getTotalSpanText());
+						Assert.assertEquals(1, testHandler.getTotalHeadingText());
 					}
 					else {
 						Assert.fail();
@@ -78,30 +80,39 @@ public class SAXParserTest {
 			e.printStackTrace();
 			Assert.fail();
 		}
-
 	}
 
 	protected class TestHandler extends DefaultHandler implements LexicalHandler {
 
 		// Private Data Members
 		private int totalAttributes;
-		private int totalCharacters;
 		private int totalComments;
-		private int totalStartElements;
 		private int totalEndElements;
+
+		private int totalHeadingText;
+		private int totalInlineScripts;
+		private int totalPlainText;
+		private int totalSpanText;
+		private int totalStartElements;
 
 		@Override
 		public void characters(char[] chars, int start, int length) throws SAXException {
 			String text = new String(chars, start, length);
 
-			if (text.equals("text inside span") || text.equals("#{i18n['attachments']}")) {
-				Assert.assertTrue(true);
+			if (text.equals("text inside span")) {
+				totalSpanText++;
+			}
+			else if (text.equals("#{i18n['attachments']}")) {
+				totalHeadingText++;
+			}
+			else if (text.equals("alert('hello world');") || (text.equals("console.log('hello world');"))) {
+				totalInlineScripts++;
 			}
 			else {
 				Assert.fail();
 			}
 
-			totalCharacters++;
+			totalPlainText++;
 
 			logger.debug("text->" + text + "<-");
 		}
@@ -119,7 +130,6 @@ public class SAXParserTest {
 
 		@Override
 		public void endDocument() throws SAXException {
-			Assert.assertTrue(true);
 			logger.debug("endDocument");
 		}
 
@@ -145,7 +155,6 @@ public class SAXParserTest {
 		@Override
 		public void startDocument() throws SAXException {
 			logger.debug("startDocument");
-			Assert.assertTrue(true);
 		}
 
 		public void startDTD(String name, String publicId, String systemId) throws SAXException {
@@ -188,34 +197,30 @@ public class SAXParserTest {
 		protected void testURI(String uri, String localName) {
 
 			if (localName.equals("composition")) {
-				Assert.assertEquals(uri, "http://java.sun.com/jsf/facelets");
+				Assert.assertEquals(uri, "http://xmlns.jcp.org/jsf/facelets");
 			}
 			else if (localName.equals("layout")) {
 				Assert.assertEquals(uri, "http://liferay.com/faces/aui");
 			}
 			else if (localName.equals("clipboard")) {
-				Assert.assertEquals(uri, "http://java.sun.com/jsf/composite/example-cc");
+				Assert.assertEquals(uri, "http://xmlns.jcp.org/jsf/composite/example-cc");
 			}
 			else if (localName.equals("form")) {
-				Assert.assertEquals(uri, "http://java.sun.com/jsf/html");
+				Assert.assertEquals(uri, "http://xmlns.jcp.org/jsf/html");
 			}
 			else if (localName.equals("ajax")) {
-				Assert.assertEquals(uri, "http://java.sun.com/jsf/core");
+				Assert.assertEquals(uri, "http://xmlns.jcp.org/jsf/core");
 			}
 			else if (localName.equals("inputFile")) {
 				Assert.assertEquals(uri, "http://liferay.com/faces/bridge");
 			}
 			else if (localName.equals("hr")) {
-				Assert.assertEquals(uri, StringPool.BLANK);
+				Assert.assertEquals(uri, "");
 			}
 		}
 
 		public int getTotalAttributes() {
 			return totalAttributes;
-		}
-
-		public int getTotalCharacters() {
-			return totalCharacters;
 		}
 
 		public int getTotalComments() {
@@ -226,9 +231,24 @@ public class SAXParserTest {
 			return totalEndElements;
 		}
 
+		public int getTotalHeadingText() {
+			return totalHeadingText;
+		}
+
+		public int getTotalInlineScripts() {
+			return totalInlineScripts;
+		}
+
+		public int getTotalPlainText() {
+			return totalPlainText;
+		}
+
+		public int getTotalSpanText() {
+			return totalSpanText;
+		}
+
 		public int getTotalStartElements() {
 			return totalStartElements;
 		}
-
 	}
 }

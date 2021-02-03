@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,13 +17,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import com.liferay.faces.util.logging.Logger;
-import com.liferay.faces.util.logging.LoggerFactory;
 import com.liferay.faces.demos.expando.UserExpando;
 import com.liferay.faces.demos.model.Registrant;
+import com.liferay.faces.util.logging.Logger;
+import com.liferay.faces.util.logging.LoggerFactory;
+
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
-import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.Contact;
 import com.liferay.portal.model.ListType;
@@ -40,6 +40,7 @@ import com.liferay.portal.service.RoleLocalServiceUtil;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.service.persistence.PhoneUtil;
+
 import com.liferay.portlet.expando.model.ExpandoBridge;
 import com.liferay.portlet.usersadmin.util.UsersAdminUtil;
 
@@ -64,7 +65,7 @@ public class RegistrantServiceUtil {
 		String screenName = null;
 
 		if (autoScreenName) {
-			screenName = StringPool.BLANK;
+			screenName = "";
 		}
 		else {
 			screenName = registrant.getScreenName();
@@ -72,7 +73,7 @@ public class RegistrantServiceUtil {
 
 		String emailAddress = registrant.getEmailAddress();
 		long facebookId = 0;
-		String openId = StringPool.BLANK;
+		String openId = "";
 		String firstName = registrant.getFirstName();
 		String middleName = registrant.getMiddleName();
 		String lastName = registrant.getLastName();
@@ -82,7 +83,7 @@ public class RegistrantServiceUtil {
 		int birthdayMonth = 1;
 		int birthdayDay = 1;
 		int birthdayYear = 1970;
-		String jobTitle = StringPool.BLANK;
+		String jobTitle = "";
 		long[] groupIds = new long[] {};
 		long[] organizationIds = new long[] {};
 		long[] roleIds = new long[] {};

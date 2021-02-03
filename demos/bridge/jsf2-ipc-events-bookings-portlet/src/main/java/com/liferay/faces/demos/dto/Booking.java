@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-2015 Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -38,7 +38,7 @@ public class Booking implements Serializable {
 	}
 
 	public Booking(long bookingTypeId, long customerId) {
-		Calendar today = GregorianCalendar.getInstance();
+		Calendar today = new GregorianCalendar();
 		Calendar weekFromToday = (Calendar) today.clone();
 		weekFromToday.add(Calendar.DATE, 7);
 		this.bookingTypeId = bookingTypeId;
